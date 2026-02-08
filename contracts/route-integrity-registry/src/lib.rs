@@ -41,7 +41,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short,
+    contract, contractimpl, contracttype, contracterror, symbol_short,
     Address, BytesN, Env, log,
 };
 
@@ -83,7 +83,7 @@ pub struct CommitKey {
 }
 
 /// Contract error codes
-#[contracttype]
+#[contracterror]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum RegistryError {

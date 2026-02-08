@@ -5,8 +5,8 @@
 'use strict';
 
 import crypto from 'crypto';
-import db from '../db/index.js';
-import logger from '../lib/logger.js';
+import db from '../../db/index.js';
+import logger from '../../lib/logger.js';
 
 const log = logger.child({ service: 'registry' });
 
