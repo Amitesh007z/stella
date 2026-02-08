@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Stella Protocol](frontend/public/logo.jpeg)
+![Stella Protocol](<img width="768" height="279" alt="image" src="https://github.com/user-attachments/assets/f5db2e59-8e12-4a78-b3c4-1666e7e57850" />)
 
 ### **The Routing Intelligence Engine for Stellar Network**
 
