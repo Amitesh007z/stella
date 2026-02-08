@@ -62,7 +62,7 @@ export default class ErrorBoundary extends Component {
                   padding: '8px 20px',
                   borderRadius: 6,
                   border: 'none',
-                  background: 'var(--accent, #6366f1)',
+                  background: 'var(--accent, #d4553a)',
                   color: '#fff',
                   cursor: 'pointer',
                   fontSize: 13,

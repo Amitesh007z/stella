@@ -1,8 +1,8 @@
 // ─── Stella Protocol — API Client ─────────────────────────────
 // Centralized fetch helpers for all backend endpoints.
-// All routes are proxied via Vite → localhost:3001.
+// Uses Vite proxy in dev, VITE_API_URL in production.
 
-const BASE = '';  // Proxied by Vite dev server
+const BASE = import.meta.env.VITE_API_URL || '';  // Empty = same-origin (Vite proxy in dev)
 
 async function fetchJSON(url, opts = {}) {
   const res = await fetch(`${BASE}${url}`, {
