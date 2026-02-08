@@ -1,0 +1,41 @@
+name: Build Soroban Contract
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      
+      - name: Install Stellar CLI
+        run: cargo install stellar-cli --locked
+      
+      - name: Build Contract
+        run: |
+          cd contracts/route-integrity-registry
+          stellar contract build
+      
+      - name: Optimize WASM
+        run: |
+          stellar contract optimize \
+            --wasm target/wasm32-unknown-unknown/release/route_integrity_registry.wasm
+      
+      - name: Upload WASM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-integrity-registry-wasm
+          path: |
+            target/wasm32-unknown-unknown/release/route_integrity_registry.wasm
+            target/wasm32-unknown-unknown/release/route_integrity_registry.optimized.wasm
+          retention-days: 30

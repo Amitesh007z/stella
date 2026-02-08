@@ -297,6 +297,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="home-footer">
         <span>Stella Protocol • Stellar Testnet</span>
+        <Link to="/verify" className="verify-link">🔐 Verify Routes</Link>
         <span>Powered by Horizon API</span>
       </footer>
     </div>

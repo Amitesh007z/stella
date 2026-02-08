@@ -2013,6 +2013,21 @@ select.input:focus {
   z-index: 10;
 }
 
+.home-footer .verify-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.2s;
+}
+
+.home-footer .verify-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
 /* ─── Home Responsive ─────────────────────────────────────────── */
 @media (max-width: 560px) {
   .home-title {

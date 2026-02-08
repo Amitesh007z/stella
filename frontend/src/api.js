@@ -81,3 +81,11 @@ export const checkAssetTrustline = (body) =>
   fetchJSON('/api/trustlines/check-asset', { method: 'POST', body: JSON.stringify(body) });
 export const canReceiveAsset = (body) =>
   fetchJSON('/api/trustlines/can-receive', { method: 'POST', body: JSON.stringify(body) });
+
+// ─── Route Integrity Registry (Smart Contract) ────────────────
+export const getRouteCommitment = (routeHash) =>
+  fetchJSON(`/api/registry/commitment/${routeHash}`);
+export const verifyRouteCommitment = (body) =>
+  fetchJSON('/api/registry/verify', { method: 'POST', body: JSON.stringify(body) });
+export const getRegistryStats = () =>
+  fetchJSON('/api/registry/stats');

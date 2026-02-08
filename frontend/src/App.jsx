@@ -9,6 +9,7 @@ import RouteFinder    from './pages/RouteFinder';
 import GraphExplorer  from './pages/GraphExplorer';
 import Anchors        from './pages/Anchors';
 import Assets         from './pages/Assets';
+import RouteVerification from './pages/RouteVerification';
 import NotFound       from './pages/NotFound';
 
 export default function App() {
@@ -19,6 +20,9 @@ export default function App() {
           <Routes>
             {/* Public Home — Swap Widget */}
             <Route index element={<Home />} />
+            
+            {/* Route Integrity Verification */}
+            <Route path="verify" element={<RouteVerification />} />
 
             {/* Admin Console — Sidebar Layout */}
             <Route path="admin" element={<AdminLayout />}>

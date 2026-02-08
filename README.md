@@ -87,6 +87,63 @@ Stella Protocol is a **deterministic, protocol-grade routing engine** that disco
 | **Route Resolver** | K-shortest paths with Horizon validation and composite scoring |
 | **Execution Engine** | Fee calculation, slippage estimation, and step-by-step execution plans |
 | **Quote Manager** | TTL-managed quotes with refresh capability and LRU eviction |
+| **Integrity Registry** | On-chain commitment of routing decisions for transparency |
+
+---
+
+## Smart Contract: RouteIntegrityRegistry 🔐
+
+Stella Protocol includes a **Soroban smart contract** that provides cryptographic guarantees for routing transparency.
+
+### Purpose
+
+Every route computed by Stella is committed on-chain so anyone can verify that:
+- Routes were selected using **published, neutral rules**
+- No favoritism toward specific anchors or liquidity providers
+- The **solver version** is auditable and reproducible
+
+### Features
+
+| Property | Guarantee |
+|----------|-----------|
+| **Non-Custodial** | Cannot hold or transfer any assets |
+| **Immutable** | No admin functions, no upgrades |
+| **Append-Only** | Commitments cannot be modified or deleted |
+| **Open Access** | Anyone can commit and verify routes |
+
+### Verification Flow
+
+```
+User → Stella Quote → Commit Hash On-Chain → Verify Later
+```
+
+1. User receives quote with route manifest
+2. Stella commits `SHA256(route_manifest)` + `SHA256(rules)` + `SHA256(solver)`
+3. User can recompute hashes and verify against on-chain data
+
+### Build & Deploy
+
+```bash
+# Install Soroban CLI
+cargo install soroban-cli
+
+# Build contract
+cd contracts/route-integrity-registry
+soroban contract build
+
+# Run tests
+cargo test
+
+# Deploy to testnet
+soroban contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/route_integrity_registry.wasm \
+  --network testnet \
+  --source <YOUR_SECRET_KEY>
+```
+
+### Verify Routes
+
+Visit **/verify** in the Stella UI to lookup and verify route commitments.
 
 ---
 

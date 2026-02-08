@@ -7,6 +7,7 @@ import assetRoutes from './assets.js';
 import graphRoutes from './graph.js';
 import routeRoutes from './routes.js';
 import quoteRoutes from './quotes.js';
+import registryRoutes from './registry.js';
 import { sep10Routes } from './sep10.js';
 import { sep24Routes } from './sep24.js';
 import { trustlineRoutes } from './trustlines.js';
@@ -28,4 +29,7 @@ export default async function registerRoutes(fastify) {
     api.register(trustlineRoutes);    // Trustlines: /api/trustlines/*
     api.register(assetIdentifierRoutes); // Asset IDs: /api/assets/*
   }, { prefix: '/api' });
+  
+  // ── Registry routes (no prefix - handles /api internally) ──
+  fastify.register(registryRoutes);
 }
