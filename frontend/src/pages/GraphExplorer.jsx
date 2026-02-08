@@ -42,29 +42,31 @@ export default function GraphExplorer() {
   return (
     <div>
       <div className="page-header">
-        <h2>Graph Explorer</h2>
-        <p>Inspect the route graph: nodes, edges, and connectivity</p>
+        <h2><span className="card-icon">❖</span> Network Graph</h2>
+        <p>Explore the Stellar anchor and asset relationship graph</p>
       </div>
 
       {/* ── Graph Stats ───────────────────────────── */}
       <div className="stat-grid">
-        <StatBox label="Version" value={g?.version ?? '—'} cls="accent" />
-        <StatBox label="Nodes" value={fmt(g?.nodes, 0)} cls="info" />
-        <StatBox label="Edges" value={fmt(g?.edges, 0)} cls="accent" />
-        <StatBox label="DEX" value={fmt(g?.dexEdges, 0)} />
-        <StatBox label="Bridge" value={fmt(g?.bridgeEdges, 0)} />
-        <StatBox label="Connectivity" value={g ? `${(g.connectivity * 100).toFixed(0)}%` : '—'} cls={g?.connectivity > 0.5 ? 'success' : 'warning'} />
+        <StatBox label="Nodes" value={fmt(g?.nodes, 0)} cls="info" bar />
+        <StatBox label="Edges" value={fmt(g?.edges, 0)} cls="accent" bar />
+        <StatBox label="Density" value={g ? `${(g.connectivity * 100).toFixed(0)}%` : '—'} cls={g?.connectivity > 0.5 ? 'success' : 'warning'} bar />
       </div>
 
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-        <button className="btn btn-primary btn-sm" onClick={handleRebuild} disabled={rebuilding}>
-          {rebuilding ? 'Rebuilding…' : 'Rebuild Graph'}
-        </button>
+      <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
         <button className={`btn btn-ghost btn-sm ${tab === 'nodes' ? 'active' : ''}`} onClick={() => setTab('nodes')}>
           Nodes ({nodes.data?.count ?? 0})
         </button>
         <button className={`btn btn-ghost btn-sm ${tab === 'edges' ? 'active' : ''}`} onClick={() => setTab('edges')}>
           Edges ({edges.data?.count ?? 0})
+        </button>
+        <input
+          className="input"
+          placeholder="Search..."
+          style={{ flex: 1, maxWidth: 400 }}
+        />
+        <button className="btn btn-primary btn-sm" onClick={handleRebuild} disabled={rebuilding} style={{ marginLeft: 'auto' }}>
+          {rebuilding ? '↻ Rebuilding…' : '↻ Rebuild'}
         </button>
       </div>
 
@@ -178,9 +180,9 @@ export default function GraphExplorer() {
   );
 }
 
-function StatBox({ label, value, cls = '' }) {
+function StatBox({ label, value, cls = '', bar }) {
   return (
-    <div className="stat-box">
+    <div className={`stat-box ${bar ? `stat-box-bar ${cls}` : ''}`}>
       <div className="stat-label">{label}</div>
       <div className={`stat-value ${cls}`}>{value ?? '—'}</div>
     </div>
