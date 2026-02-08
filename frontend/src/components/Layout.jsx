@@ -1,0 +1,42 @@
+// ─── Stella Protocol — Sidebar Layout ─────────────────────────
+import { NavLink, Outlet } from 'react-router-dom';
+
+const NAV = [
+  { to: '/',         icon: '◈', label: 'Dashboard' },
+  { to: '/routes',   icon: '⇢', label: 'Route Finder' },
+  { to: '/graph',    icon: '◎', label: 'Graph Explorer' },
+  { to: '/anchors',  icon: '⚓', label: 'Anchors' },
+  { to: '/assets',   icon: '◇', label: 'Assets' },
+];
+
+export default function Layout() {
+  return (
+    <div className="app-layout">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <h1>STELLA</h1>
+          <p>Routing Intelligence</p>
+        </div>
+        <nav className="sidebar-nav">
+          {NAV.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              end={n.to === '/'}
+              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+            >
+              <span className="nav-icon">{n.icon}</span>
+              {n.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          Stellar Testnet · v0.1.0
+        </div>
+      </aside>
+      <main className="main-content">
+        <Outlet />
+      </main>
+    </div>
+  );
+}

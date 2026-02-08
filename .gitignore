@@ -1,0 +1,48 @@
+# ─── Dependencies ──────────────────────────────────
+node_modules/
+package-lock.json
+
+# ─── Build output ──────────────────────────────────
+dist/
+build/
+
+# ─── Environment & secrets ─────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Database (runtime) ───────────────────────────
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+data/
+
+# ─── OS junk ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+nul
+
+# ─── Crash dumps & logs ──────────────────────────
+*.stackdump
+*.log
+logs/
+
+# ─── IDE / Editor ────────────────────────────────
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Test & coverage ─────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── Misc ─────────────────────────────────────────
+.turbo/
+.cache/
+*.tgz
