@@ -75,6 +75,8 @@ class GraphEdge {
     this.withdrawEnabled = metadata.withdrawEnabled ?? false;
     this.feeFixed = metadata.feeFixed || 0;
     this.feePercent = metadata.feePercent || 0;
+    this.sep24Supported = metadata.sep24Supported ?? null;
+    this.sep10Supported = metadata.sep10Supported ?? null;
 
     // ── Common ────────────────────────────────────────
     this.weight = metadata.weight || Infinity;  // Pathfinding cost

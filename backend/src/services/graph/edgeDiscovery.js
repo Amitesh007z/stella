@@ -249,6 +249,10 @@ export function discoverAnchorBridgeEdges() {
 
         const weight = computeBridgeWeight(anchor, a, b);
 
+        // Check if this anchor actually supports SEP-24 interactive flows
+        const sep24Supported = !!anchor.transfer_server_sep24;
+        const sep10Supported = !!anchor.web_auth_endpoint;
+
         edges.push({
           sourceKey: keyA,
           targetKey: keyB,
@@ -260,6 +264,8 @@ export function discoverAnchorBridgeEdges() {
             withdrawEnabled: !!a.is_withdraw_enabled && !!b.is_deposit_enabled,
             feeFixed: (a.fee_fixed || 0) + (b.fee_fixed || 0),
             feePercent: (a.fee_percent || 0) + (b.fee_percent || 0),
+            sep24Supported,
+            sep10Supported,
             weight,
           },
           reverse: {
@@ -269,6 +275,8 @@ export function discoverAnchorBridgeEdges() {
             withdrawEnabled: !!b.is_withdraw_enabled && !!a.is_deposit_enabled,
             feeFixed: (a.fee_fixed || 0) + (b.fee_fixed || 0),
             feePercent: (a.fee_percent || 0) + (b.fee_percent || 0),
+            sep24Supported,
+            sep10Supported,
             weight,
           },
         });

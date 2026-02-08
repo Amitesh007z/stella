@@ -26,7 +26,7 @@ const CONTENT_TYPES = {
 };
 
 // Build stamp — increment to verify fresh server is loaded
-const BUILD_STAMP = '2026-02-08T6';
+const BUILD_STAMP = '2026-02-08T7';
 
 // Default strategy order: JSON → multipart → form.
 // JSON is first because testanchor (Polaris-based) returns 500 for form-encoded:
@@ -270,6 +270,120 @@ async function fetchGetWithTimeout(url, headers = {}, timeoutMs = FETCH_TIMEOUT_
  */
 function joinUrl(base, path) {
   return base.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '');
+}
+
+// ─── Anchor /info cache ───────────────────────────────────────
+const anchorInfoCache = new Map();
+const ANCHOR_INFO_TTL_MS = 15 * 60 * 1000; // 15 min
+
+/**
+ * Fetch the anchor's SEP-24 /info to discover supported assets.
+ * Caches results per anchor domain.
+ *
+ * @returns {{ deposit: {[code]: object}, withdraw: {[code]: object} } | null}
+ */
+async function fetchAnchorInfo(anchorDomain, providedEndpoint) {
+  const cacheKey = anchorDomain;
+  const cached = anchorInfoCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.info;
+
+  try {
+    const sep24Base = providedEndpoint || await discoverSep24Endpoint(anchorDomain);
+    const infoUrl = joinUrl(sep24Base, 'info');
+    log.debug({ infoUrl, anchorDomain }, 'Fetching anchor /info for asset resolution');
+
+    const response = await fetchGetWithTimeout(infoUrl, { 'Accept': 'application/json' }, 8_000);
+    if (!response.ok) {
+      log.warn({ anchorDomain, status: response.status }, 'Anchor /info returned error');
+      return null;
+    }
+
+    const info = await response.json();
+    anchorInfoCache.set(cacheKey, { info, expiresAt: Date.now() + ANCHOR_INFO_TTL_MS });
+    log.debug({
+      anchorDomain,
+      depositAssets: info.deposit ? Object.keys(info.deposit) : [],
+      withdrawAssets: info.withdraw ? Object.keys(info.withdraw) : [],
+    }, 'Anchor /info fetched');
+    return info;
+  } catch (err) {
+    log.warn({ anchorDomain, error: err.message }, 'Failed to fetch anchor /info');
+    return null;
+  }
+}
+
+/**
+ * Resolve the correct asset code for an anchor based on their /info.
+ *
+ * Logic:
+ *   1. If the anchor's /info lists the exact code → use as-is
+ *   2. If the request is for 'XLM' or 'native' and the anchor doesn't
+ *      list 'XLM' → find a code the anchor supports that maps to native
+ *      (e.g. testanchor uses 'SRT', some use 'native')
+ *   3. If the anchor's /info can't be fetched → pass through as-is (best effort)
+ *
+ * @param {string} anchorDomain
+ * @param {string} flowType - 'deposit' or 'withdraw'
+ * @param {string} requestedCode - The asset code the user wants
+ * @param {string|null} providedEndpoint - Override endpoint
+ * @returns {Promise<string>} The resolved asset code the anchor expects
+ */
+async function resolveAnchorAssetCode(anchorDomain, flowType, requestedCode, providedEndpoint) {
+  const info = await fetchAnchorInfo(anchorDomain, providedEndpoint);
+  if (!info) return requestedCode; // Can't resolve, pass through
+
+  const section = info[flowType]; // info.deposit or info.withdraw
+  if (!section || typeof section !== 'object') return requestedCode;
+
+  const supportedCodes = Object.keys(section);
+
+  // 1. Exact match — the anchor supports this code
+  if (section[requestedCode] && section[requestedCode].enabled !== false) {
+    return requestedCode;
+  }
+
+  // 2. XLM / native mapping — user asks for 'XLM' but anchor might
+  //    call it something else (e.g. testanchor uses 'SRT').
+  const isNativeRequest = requestedCode === 'XLM' || requestedCode === 'native';
+  if (isNativeRequest) {
+    // Try 'native' first, then any asset that the anchor lists as native
+    if (section['native'] && section['native'].enabled !== false) {
+      return 'native';
+    }
+    // Look for any enabled asset — some anchors list their primary asset
+    // as the native equivalent. If only 1 enabled asset, and the user
+    // asked for XLM, return it (common for testanchor: only SRT is enabled).
+    const enabledAssets = supportedCodes.filter(c => section[c].enabled !== false);
+    if (enabledAssets.length === 1) {
+      log.info({
+        anchorDomain,
+        requested: requestedCode,
+        resolved: enabledAssets[0],
+      }, 'Resolved XLM/native to anchor\u2019s single supported asset');
+      return enabledAssets[0];
+    }
+    // Otherwise, can't determine — pass through and let the anchor reply
+    log.warn({
+      anchorDomain,
+      requested: requestedCode,
+      supportedCodes,
+    }, 'Cannot map XLM/native to anchor asset — passing through');
+    return requestedCode;
+  }
+
+  // 3. Non-XLM: check case-insensitive match
+  const match = supportedCodes.find(
+    c => c.toLowerCase() === requestedCode.toLowerCase() && section[c].enabled !== false
+  );
+  if (match) return match;
+
+  // 4. No match — pass through (anchor will reject with a clear error)
+  log.warn({
+    anchorDomain,
+    requestedCode,
+    supportedCodes: supportedCodes.filter(c => section[c].enabled !== false),
+  }, 'Requested asset not in anchor\u2019s /info — passing through as-is');
+  return requestedCode;
 }
 
 // ─── Endpoint discovery ────────────────────────────────────────
@@ -539,12 +653,21 @@ export async function sep24Routes(fastify) {
 
     let params = null;
     try {
-      // ─── Normalization for Test Anchor ─────────────────────
-      // testanchor (Polaris) requires 'SRT' for XLM on testnet.
-      // Wallets send 'XLM', causing "asset_code must be set" (not found) errors.
-      if (anchorDomain.includes('testanchor') && txRequest.assetCode === 'XLM') {
-        log.info('Mapping XLM -> SRT for testanchor compatibility');
-        txRequest.assetCode = 'SRT';
+      // ─── Generic Asset Code Resolution ─────────────────────
+      // Different anchors may use different codes for the same asset.
+      // For example, testanchor uses 'SRT' instead of 'XLM'.
+      // Query the anchor's /info endpoint to discover supported assets,
+      // then map the requested asset code to one the anchor recognizes.
+      const resolvedAssetCode = await resolveAnchorAssetCode(
+        anchorDomain, type, txRequest.assetCode, providedEndpoint
+      );
+      if (resolvedAssetCode !== txRequest.assetCode) {
+        log.info({
+          anchorDomain,
+          original: txRequest.assetCode,
+          resolved: resolvedAssetCode,
+        }, 'Asset code resolved via anchor /info');
+        txRequest.assetCode = resolvedAssetCode;
       }
 
       // ── Preflight validation ───────────────────────────────
@@ -710,10 +833,12 @@ export async function sep24Routes(fastify) {
   fastify.delete('/sep24/cache', async () => {
     const profileCount = anchorProfiles.size;
     const endpointCount = sep24EndpointCache.size;
+    const infoCount = anchorInfoCache.size;
     anchorProfiles.clear();
     sep24EndpointCache.clear();
-    log.info({ profileCount, endpointCount }, 'SEP-24 caches cleared');
-    return { cleared: { profiles: profileCount, endpoints: endpointCount } };
+    anchorInfoCache.clear();
+    log.info({ profileCount, endpointCount, infoCount }, 'SEP-24 caches cleared');
+    return { cleared: { profiles: profileCount, endpoints: endpointCount, anchorInfo: infoCount } };
   });
 
   // ── GET /sep24/diagnostics ───────────────────────────────────

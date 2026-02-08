@@ -19,7 +19,7 @@ const LIGHT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 // Full rebuild: every 30 minutes (discover new edges, sync with registry changes)
 const FULL_REBUILD_INTERVAL_MS = 30 * 60 * 1000;
 // Delay after boot before first build (wait for asset sync)
-const INITIAL_BUILD_DELAY_MS = 5000;
+const INITIAL_BUILD_DELAY_MS = 1000;
 
 let lightRefreshTimer = null;
 let fullRebuildTimer = null;

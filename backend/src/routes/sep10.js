@@ -244,13 +244,30 @@ export async function sep10Routes(fastify) {
         throw new Error('Challenge response missing transaction XDR');
       }
 
+      // ── Network passphrase check ─────────────────────────
+      const challengeNetwork = challengeData.network_passphrase;
+      const expectedNetwork = config.networkPassphrase;
+      if (challengeNetwork && challengeNetwork !== expectedNetwork) {
+        recordFailureCategory('network_mismatch');
+        log.error({
+          anchorDomain, challengeNetwork, expectedNetwork,
+        }, 'SEP-10 challenge network mismatch — anchor is on a different Stellar network');
+        throw Errors.badRequest(
+          `Network mismatch: ${anchorDomain} returned a challenge for ` +
+          `"${challengeNetwork.slice(0, 40)}..." but you are on ` +
+          `"${expectedNetwork.slice(0, 40)}...". ` +
+          `This anchor may only support ${challengeNetwork.includes('Test') ? 'testnet' : 'mainnet'}.`
+        );
+      }
+
       sep10Metrics.challengeSuccesses++;
-      log.info({ anchorDomain, account: userPublicKey }, 'SEP-10 challenge obtained');
+      log.info({ anchorDomain, account: userPublicKey, network: challengeNetwork || expectedNetwork },
+        'SEP-10 challenge obtained');
 
       return {
         success: true,
         challengeXdr: challengeData.transaction,
-        networkPassphrase: challengeData.network_passphrase || config.networkPassphrase,
+        networkPassphrase: challengeNetwork || expectedNetwork,
         authEndpoint
       };
 
@@ -297,6 +314,25 @@ export async function sep10Routes(fastify) {
       if (!authResponse.ok) {
         const text = await authResponse.text();
         recordFailureCategory(`submit_http_${authResponse.status}`);
+
+        // ── Provide actionable error for common 403 causes ──
+        if (authResponse.status === 403) {
+          const lower = text.toLowerCase();
+          const isPermission = lower.includes('permission') || lower.includes('forbidden') || lower.includes('not allowed');
+          const networkHint = isTestnet()
+            ? ` This anchor (${anchorDomain}) may be mainnet-only and not accessible from testnet.`
+            : '';
+          throw new Error(
+            `Anchor ${anchorDomain} rejected authentication (403 Forbidden). ` +
+            (isPermission
+              ? `The anchor says: ${text.slice(0, 200)}.${networkHint} ` +
+                `Possible causes: (1) the anchor only operates on a different Stellar network, ` +
+                `(2) your account is not registered with this anchor, ` +
+                `(3) the anchor requires KYC or whitelisting before auth.`
+              : `Response: ${text.slice(0, 200)}.${networkHint}`)
+          );
+        }
+
         throw new Error(`Auth submission failed: ${authResponse.status} - ${text}`);
       }
 
@@ -437,12 +473,12 @@ async function discoverWebAuthEndpoint(anchorDomain) {
   const lines = tomlText.split('\n');
   
   let endpoint = null;
+  let anchorNetwork = null;
   for (const line of lines) {
-    const match = line.match(/WEB_AUTH_ENDPOINT\s*=\s*"([^"]+)"/);
-    if (match) {
-      endpoint = match[1];
-      break;
-    }
+    const authMatch = line.match(/WEB_AUTH_ENDPOINT\s*=\s*"([^"]+)"/);
+    if (authMatch) endpoint = authMatch[1];
+    const netMatch = line.match(/NETWORK_PASSPHRASE\s*=\s*"([^"]+)"/);
+    if (netMatch) anchorNetwork = netMatch[1];
   }
 
   if (!endpoint) {
@@ -450,8 +486,30 @@ async function discoverWebAuthEndpoint(anchorDomain) {
     throw new Error(`Anchor ${anchorDomain} stellar.toml missing WEB_AUTH_ENDPOINT (SEP-10 not supported)`);
   }
 
+  // ── Network mismatch detection ─────────────────────────
+  // If anchor declares a NETWORK_PASSPHRASE, check it matches ours.
+  // Most pubnet anchors omit it (pubnet is the default), so if absent
+  // AND we're on testnet, that's very likely a pubnet-only anchor.
+  const ourNetwork = config.networkPassphrase;
+  if (anchorNetwork && anchorNetwork !== ourNetwork) {
+    log.warn({ anchorDomain, anchorNetwork, ourNetwork },
+      'Network mismatch: anchor is on a different Stellar network');
+    throw new Error(
+      `Anchor ${anchorDomain} operates on a different network. ` +
+      `Anchor: "${anchorNetwork.slice(0, 30)}...", Ours: "${ourNetwork.slice(0, 30)}...". ` +
+      `You may be on testnet trying to reach a mainnet anchor, or vice versa.`
+    );
+  }
+  if (!anchorNetwork && isTestnet()) {
+    // Pubnet anchors typically don't declare NETWORK_PASSPHRASE (it's the default).
+    // If WE are on testnet and the anchor didn't declare it, warn that this is
+    // probably a pubnet anchor.
+    log.warn({ anchorDomain, endpoint },
+      'Anchor TOML has no NETWORK_PASSPHRASE and we are on testnet — likely a pubnet-only anchor');
+  }
+
   // Cache it (network-scoped)
-  tomlCache.set(cacheKey, { endpoint, expiresAt: Date.now() + TOML_CACHE_TTL_MS });
+  tomlCache.set(cacheKey, { endpoint, anchorNetwork, expiresAt: Date.now() + TOML_CACHE_TTL_MS });
   log.debug({ anchorDomain, endpoint, network: config.network }, 'WEB_AUTH_ENDPOINT discovered and cached');
   return endpoint;
 }
