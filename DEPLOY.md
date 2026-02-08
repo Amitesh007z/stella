@@ -1,5 +1,12 @@
 # Stella Protocol — Deployment Guide
 
+## Live URLs
+
+| Service | URL |
+|---------|-----|
+| **Backend API** | https://stellabackend-production.up.railway.app |
+| **Frontend** | (Deploy to Vercel) |
+
 ## Quick Start
 
 ### Frontend (Vercel)
@@ -10,7 +17,7 @@ vercel
 ```
 
 Set environment variable in Vercel dashboard:
-- `VITE_API_URL` = Your backend URL (e.g., `https://stella-api.railway.app`)
+- `VITE_API_URL` = `https://stellabackend-production.up.railway.app`
 
 ### Backend Options
 
@@ -81,6 +88,6 @@ For production with Vercel, consider migrating to Turso (SQLite-compatible cloud
 ## Domains Setup
 
 1. Deploy frontend to Vercel → get `stella-frontend.vercel.app`
-2. Deploy backend to Railway → get `stella-api.railway.app`
-3. Set `VITE_API_URL=https://stella-api.railway.app` in Vercel
+2. Backend is live at → `https://stellabackend-production.up.railway.app`
+3. Set `VITE_API_URL=https://stellabackend-production.up.railway.app` in Vercel
 4. (Optional) Add custom domains in each platform's dashboard

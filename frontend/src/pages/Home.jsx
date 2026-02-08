@@ -387,11 +387,11 @@ function RouteCard({ route, index, isBest, sourceLabel, destLabel, amount, expan
               <>
                 <div className="detail-item">
                   <span className="detail-label">Amount Score</span>
-                  <span className="detail-value">{(route.scoring.receiveAmountScore * 100).toFixed(0)}%</span>
+                  <span className="detail-value">{((route.scoring.amount || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Reliability</span>
-                  <span className="detail-value">{(route.scoring.reliabilityScore * 100).toFixed(0)}%</span>
+                  <span className="detail-value">{((route.scoring.reliability || 0) * 100).toFixed(0)}%</span>
                 </div>
               </>
             )}
