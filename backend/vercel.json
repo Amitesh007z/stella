@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/serverless.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/serverless.js" },
+    { "src": "/health", "dest": "/api/serverless.js" },
+    { "src": "/info", "dest": "/api/serverless.js" }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "STELLAR_NETWORK": "testnet"
+  }
+}
